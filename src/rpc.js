@@ -140,9 +140,18 @@ module.exports = function listen(handler, ia32) {
      * @param {number} old
      * @param {number} timeout
      */
-    function waitAsync(ia32, offset, old, timeout = Infinity) {
+    function waitAsync(ia32, offset, old, timeout = 10) {
         // @ts-ignore
-        return cancelable(Atomics.waitAsync(ia32, offset, old, timeout))
+        const res = Atomics.waitAsync(ia32, offset, old, timeout)
+
+        return cancelable(res.async ?
+            res.value :
+            new Promise((r) => {
+                setTimeout(() => {
+                    r(res.value)
+                }, 1)
+            })
+        )
     }
 
     /**
@@ -222,9 +231,9 @@ module.exports = function listen(handler, ia32) {
     }
 
     /**
-     * @type {number}
+     * @type {any}
      */
-    let pendingId = -1
+    let pendingId = null
 
     /**
      * start async poll loop

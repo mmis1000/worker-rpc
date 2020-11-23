@@ -9,7 +9,7 @@ declare class WeakRef<T> {
  * @template V Holding value
  */
 declare class FinalizationRegistry<T, U, V> {
-    constructor (cb: (iter: Array<V>)=>void)
+    constructor (cb: (iter: V)=>void)
     register(target: T, holding: V, token: U): void
     unregister(token: U): void
 }

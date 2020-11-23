@@ -120,16 +120,14 @@ module.exports = {
         /**
          * @type {FinalizationRegistry<any, any, number>}
          */
-        const cleaner = new FinalizationRegistry(iter => {
+        const cleaner = new FinalizationRegistry(id => {
             batchUnref(() => {
-                for (let id of iter) {
-                    remoteIdToObject.delete(id)
-                    unrefRemote(id)
-                }
+                remoteIdToObject.delete(id)
+                unrefRemote(id)
             })
         })
         
-        ;/** @type {any} */(global).__finalizationGroups.push(cleaner)
+        // ;/** @type {any} */(global).__finalizationGroups.push(cleaner)
     
 
         let bufferingRefs = false
