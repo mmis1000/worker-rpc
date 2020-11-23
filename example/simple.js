@@ -7,7 +7,8 @@ const DomProxy = require('../src/dom-proxy')
 if (isMainThread) {
     const sab = new SharedArrayBuffer(1024 * 1024 * 8)
     const ia32 = new Int32Array(sab)
-    const proxy = DomProxy.create(ia32, () => ({ b: 'BBBB' , console }))
+    let i = 0
+    const proxy = DomProxy.create(ia32, () => ({ b: 'BBBB' , console, B: () => i++ }))
 
     const worker = new Worker(__filename, {
         workerData: {
@@ -23,10 +24,13 @@ if (isMainThread) {
 
         const start = Date.now()
         console.log(start)
+        let res = 0
+
         for (let i = 0; i < 10000; i++) {
-            remote.A(i)
+            res += remote.A()
         }
-        console.log(Date.now() - start, remote.a)
+
+        console.log(Date.now() - start, remote.a, res)
 
         worker.postMessage('Hello World')
     });
@@ -38,7 +42,7 @@ if (isMainThread) {
 } else {
     const ia32 = workerData.ia32;
     const host = workerData.host;
-    const proxy = DomProxy.create(ia32, () => ({ a: 'AAAA', A: (a) => a }))
+    const proxy = DomProxy.create(ia32, () => ({ a: 'AAAA', A: (a) => mainLand.B() }))
     const mainLand = proxy.getRemote(host)
 
     parentPort.once('message', (message) => {

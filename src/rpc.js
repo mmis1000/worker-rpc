@@ -142,7 +142,7 @@ module.exports = function listen(handler, ia32) {
      * @param {number} old
      * @param {number} timeout
      */
-    function waitAsync(ia32, offset, old, timeout = 500) {
+    function waitAsync(ia32, offset, old, timeout = Infinity) {
         // @ts-ignore
         const res = Atomics.waitAsync(ia32, offset, old, timeout)
 
@@ -338,7 +338,9 @@ module.exports = function listen(handler, ia32) {
         // send the message via GIL if the target is in block mode
         Atomics.store(ia32, OFFSET_GIL, newGIL)
         Atomics.load(ia32, OFFSET_GIL)
-        if (Atomics.notify(ia32, OFFSET_GIL, Infinity) === 0) {
+
+        // fast path, the other end is listening, so we don't need to poll change actively
+        if (Atomics.notify(ia32, OFFSET_GIL, Infinity) < Atomics.load(ia32, OFFSET_THREAD_INDEX) - 1) {
             while (Atomics.wait(ia32, OFFSET_GIL, newGIL, MISS_AWAIT_TIMEOUT) === 'timed-out') {
                 if (Atomics.load(ia32, OFFSET_GIL) !== newGIL) break
                 Atomics.notify(ia32, OFFSET_GIL, Infinity)
@@ -490,7 +492,8 @@ module.exports = function listen(handler, ia32) {
             Atomics.load(ia32, OFFSET_GIL)
 
             // send the message via GIL if the target is in block mode
-            if (Atomics.notify(ia32, OFFSET_GIL, Infinity) === 0) {
+            // fast path, the other end is listening, so we don't need to poll change actively
+            if (Atomics.notify(ia32, OFFSET_GIL, Infinity) < Atomics.load(ia32, OFFSET_THREAD_INDEX) - 1) {
                 while  (Atomics.wait(ia32, OFFSET_GIL, GIL, MISS_AWAIT_TIMEOUT) === 'timed-out') {
                     if (Atomics.load(ia32, OFFSET_GIL) !== GIL) break
                     Atomics.notify(ia32, OFFSET_GIL, Infinity)
