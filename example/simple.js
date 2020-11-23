@@ -32,7 +32,7 @@ if (isMainThread) {
     });
 
     worker.on('exit', (code) => {
-        console(`Worker stopped with exit code ${code}`);
+        console.log(`Worker stopped with exit code ${code}`);
     });
 
 } else {
