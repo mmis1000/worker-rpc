@@ -140,7 +140,7 @@ module.exports = function listen(handler, ia32) {
      * @param {number} old
      * @param {number} timeout
      */
-    function waitAsync(ia32, offset, old, timeout = 10) {
+    function waitAsync(ia32, offset, old, timeout = 500) {
         // @ts-ignore
         const res = Atomics.waitAsync(ia32, offset, old, timeout)
 
@@ -336,7 +336,12 @@ module.exports = function listen(handler, ia32) {
 
         // send the message via GIL if the target is in block mode
         Atomics.store(ia32, OFFSET_GIL, newGIL)
-        Atomics.notify(ia32, OFFSET_GIL, Infinity)
+        Atomics.load(ia32, OFFSET_GIL)
+        if (Atomics.notify(ia32, OFFSET_GIL, Infinity) === 0) {
+            if (Atomics.wait(ia32, OFFSET_GIL, newGIL, 1) === 'timed-out') {
+                Atomics.notify(ia32, OFFSET_GIL, Infinity)
+            }
+        }
     }
 
     /**
@@ -477,7 +482,11 @@ module.exports = function listen(handler, ia32) {
             Atomics.load(ia32, OFFSET_GIL)
 
             // send the message via GIL if the target is in block mode
-            Atomics.notify(ia32, OFFSET_GIL, Infinity)
+            if (Atomics.notify(ia32, OFFSET_GIL, Infinity) === 0) {
+                if (Atomics.wait(ia32, OFFSET_GIL, GIL, 1) === 'timed-out') {
+                    Atomics.notify(ia32, OFFSET_GIL, Infinity)
+                }
+            }
 
             return pollResponse(ia32, GIL, currentThread, targetThread)
         }
