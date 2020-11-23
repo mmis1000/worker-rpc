@@ -9,6 +9,8 @@ if (typeof setImmediate === 'undefined') {
     clearImmediate = clearTimeout
 }
 
+const MISS_AWAIT_TIMEOUT = 0.05
+
 /**
  * 
  * @param {(from: number, message: any)=>any} handler 
@@ -286,10 +288,9 @@ module.exports = function listen(handler, ia32) {
      * handle request
      * @param {Int32Array} ia32 
      * @param {number} current 
-     * @param {number?} GIL 
+     * @param {number} GIL 
      */
-    function handleMessage(ia32, current, GIL = null) {
-        GIL = GIL !== null ? GIL: Atomics.load(ia32, OFFSET_GIL)
+    function handleMessage(ia32, current, GIL) {
         const OLD = GIL
         const state = field(GIL, MASK_STATE)
 
@@ -338,8 +339,11 @@ module.exports = function listen(handler, ia32) {
         Atomics.store(ia32, OFFSET_GIL, newGIL)
         Atomics.load(ia32, OFFSET_GIL)
         if (Atomics.notify(ia32, OFFSET_GIL, Infinity) === 0) {
-            while (Atomics.wait(ia32, OFFSET_GIL, newGIL, 1) === 'timed-out') {
-                if (Atomics.notify(ia32, OFFSET_GIL, Infinity)) break
+            while (Atomics.wait(ia32, OFFSET_GIL, newGIL, MISS_AWAIT_TIMEOUT) === 'timed-out') {
+                if (
+                    Atomics.notify(ia32, OFFSET_GIL, Infinity) ||
+                    Atomics.load(ia32, OFFSET_GIL) !== newGIL
+                ) break
             }
         }
     }
@@ -374,22 +378,27 @@ module.exports = function listen(handler, ia32) {
     /**
      * poll the response back
      * @param {Int32Array} ia32 
-     * @param {number} GIL 
+     * @param {number} INIT_GIL 
      * @param {number} currentThread
      * @param {number} target
      */
-    function pollResponse(ia32, GIL, currentThread, target) {
+    function pollResponse(ia32, INIT_GIL, currentThread, target) {
+        let GIL = INIT_GIL
+        let to;
+        let from;
+        let state;
+
         while (true) {
-            let to;
-            let from;
-            let state;
-            do {
+            to = field(GIL, MASK_TO)
+            from = field(GIL, MASK_FROM)
+            state = field(GIL, MASK_STATE)
+            while (to !== currentThread) {
                 wait(ia32, OFFSET_GIL, GIL)
                 GIL = Atomics.load(ia32, OFFSET_GIL)
                 to = field(GIL, MASK_TO)
                 from = field(GIL, MASK_FROM)
                 state = field(GIL, MASK_STATE)
-            } while (to !== currentThread)
+            } 
 
             if (field(GIL, MASK_STATE) === STATE_RESPONSE && from === target) {
                 return getMessage(ia32, Atomics.load(ia32, OFFSET_BUFFER_SIZE))
@@ -398,6 +407,7 @@ module.exports = function listen(handler, ia32) {
                 stopAsyncPolling()
                 handleMessage(ia32, currentThread, GIL)
                 startAsyncPolling(ia32, currentThread)
+                GIL = Atomics.load(ia32, OFFSET_GIL)
             } else {
                 // we fuck up, really hard
                 // debugger;
@@ -483,8 +493,11 @@ module.exports = function listen(handler, ia32) {
 
             // send the message via GIL if the target is in block mode
             if (Atomics.notify(ia32, OFFSET_GIL, Infinity) === 0) {
-                while  (Atomics.wait(ia32, OFFSET_GIL, GIL, 1) === 'timed-out') {
-                    if (Atomics.notify(ia32, OFFSET_GIL, Infinity)) break
+                while  (Atomics.wait(ia32, OFFSET_GIL, GIL, MISS_AWAIT_TIMEOUT) === 'timed-out') {
+                    if (
+                        Atomics.notify(ia32, OFFSET_GIL, Infinity) ||
+                        Atomics.load(ia32, OFFSET_GIL) !== GIL
+                    ) break
                 }
             }
 
