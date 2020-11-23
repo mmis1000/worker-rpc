@@ -338,8 +338,8 @@ module.exports = function listen(handler, ia32) {
         Atomics.store(ia32, OFFSET_GIL, newGIL)
         Atomics.load(ia32, OFFSET_GIL)
         if (Atomics.notify(ia32, OFFSET_GIL, Infinity) === 0) {
-            if (Atomics.wait(ia32, OFFSET_GIL, newGIL, 1) === 'timed-out') {
-                Atomics.notify(ia32, OFFSET_GIL, Infinity)
+            while (Atomics.wait(ia32, OFFSET_GIL, newGIL, 1) === 'timed-out') {
+                if (Atomics.notify(ia32, OFFSET_GIL, Infinity)) break
             }
         }
     }
@@ -483,8 +483,8 @@ module.exports = function listen(handler, ia32) {
 
             // send the message via GIL if the target is in block mode
             if (Atomics.notify(ia32, OFFSET_GIL, Infinity) === 0) {
-                if (Atomics.wait(ia32, OFFSET_GIL, GIL, 1) === 'timed-out') {
-                    Atomics.notify(ia32, OFFSET_GIL, Infinity)
+                while  (Atomics.wait(ia32, OFFSET_GIL, GIL, 1) === 'timed-out') {
+                    if (Atomics.notify(ia32, OFFSET_GIL, Infinity)) break
                 }
             }
 
