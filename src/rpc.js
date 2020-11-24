@@ -262,7 +262,7 @@ module.exports = function listen(handler, ia32) {
                         await promise
     
                         const GIL = Atomics.load(ia32, OFFSET_GIL)
-                        if (GIL === 0 || field(GIL, MASK_TO) !== currentThread) continue
+                        if (GIL === 0 || field(GIL, MASK_TO) !== currentThread || field(GIL, MASK_STATE) === STATE_PREPARE) continue
     
                         handleMessage(ia32, currentThread, GIL)
                     } catch (err) {
