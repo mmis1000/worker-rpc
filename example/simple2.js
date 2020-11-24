@@ -2,7 +2,7 @@ const {
     Worker, isMainThread, parentPort, workerData
 } = require('worker_threads');
 
-const DomProxy = require('../src/dom-proxy')
+const ObjectProxy = require('../src/object-proxy')
 
 function spawnWorker(id, data, callback) {
     const worker = new Worker(__filename, {
@@ -29,7 +29,7 @@ if (isMainThread) {
     const sab = new SharedArrayBuffer(1024 * 1024 * 8)
     const ia32 = new Int32Array(sab)
     let i = 0
-    const proxy = DomProxy.create(ia32, () => ({ a: 'AAAA', console }))
+    const proxy = ObjectProxy.create(ia32, () => ({ a: 'AAAA', console }))
     const current = proxy.current
 
     spawnWorker('b', { host: current, ia32 }, function (bWorkerId, workerB) {
@@ -67,7 +67,7 @@ if (isMainThread) {
 }
 
 function workerB (ia32, host) {
-    const proxy = DomProxy.create(ia32, () => ({
+    const proxy = ObjectProxy.create(ia32, () => ({
         b: 'BBBB',
         wrap: (cb) => ((count) => cb(count + 2))
     }))
@@ -83,7 +83,7 @@ function workerB (ia32, host) {
 }
 
 function workerC (ia32, host) {
-    const proxy = DomProxy.create(ia32, () => ({
+    const proxy = ObjectProxy.create(ia32, () => ({
         c: 'CCCC',
         wrap: (cb) => ((count) => cb(count + 3))
     }))
