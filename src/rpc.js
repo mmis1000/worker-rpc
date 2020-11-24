@@ -179,6 +179,7 @@ module.exports = function listen(handler, ia32) {
     const STATE_PREPARE = 1
     const STATE_SEND = 2
     const STATE_RESPONSE = 3
+    const STATE_PROCESSING= 4
 
     let current = 0
 
@@ -294,30 +295,39 @@ module.exports = function listen(handler, ia32) {
         const OLD = GIL
         const state = field(GIL, MASK_STATE)
 
-        if (state !== STATE_SEND) {
-            // maybe preparing...
-            wait(ia32, OFFSET_GIL, GIL)
-            GIL = Atomics.load(ia32, OFFSET_GIL)
-        }
+        // if (state !== STATE_SEND) {
+        //     // maybe preparing...
+        //     wait(ia32, OFFSET_GIL, GIL)
+        //     GIL = Atomics.load(ia32, OFFSET_GIL)
+        //     throw new Error('bad state 0x' + state.toString(16))
+        // }
 
-        if (field(GIL, MASK_STATE) !== STATE_SEND) {
-            explainGIL(OLD)
-            explainGIL(GIL)
-            throw new Error('bad state 0x' + state.toString(16))
-        }
+        // if (field(GIL, MASK_STATE) !== STATE_SEND) {
+        //     explainGIL(OLD)
+        //     explainGIL(GIL)
+        //     throw new Error('bad state 0x' + state.toString(16))
+        // }
 
         const from = field(GIL, MASK_FROM)
         const to = field(GIL, MASK_TO)
 
-        if (to !== current) {
-            // whyyy?
-            return
-        }
+        // if (to !== current) {
+        //     // whyyy?
+        //     throw new Error('bad state 0x' + state.toString(16))
+        //     return
+        // }
 
         const messageSize = Atomics.load(ia32, OFFSET_BUFFER_SIZE)
         const message = getMessage(ia32, messageSize)
 
         let response
+
+
+        let handlingGIL =
+            current << MASK_OFFSET[MASK_FROM] |
+            current << MASK_OFFSET[MASK_TO] |
+            STATE_PROCESSING << MASK_OFFSET[MASK_STATE]
+        Atomics.store(ia32, OFFSET_GIL, handlingGIL)
 
         if (threadState === THREAD_STATE_BLOCKING) {
             response = handler(from, message)
