@@ -47,6 +47,7 @@ if (isMainThread) {
                 res +=fn(1)
             }
             console.log(res, Date.now() - start)
+            process.exit()
         }) 
     })
 } else {

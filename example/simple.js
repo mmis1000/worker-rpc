@@ -8,7 +8,7 @@ if (isMainThread) {
     const sab = new SharedArrayBuffer(1024 * 1024 * 8)
     const ia32 = new Int32Array(sab)
     let i = 0
-    const proxy = DomProxy.create(ia32, () => ({ b: 'BBBB' , console, B: () => i++ }))
+    const proxy = DomProxy.create(ia32, () => ({ b: 'BBBB' , console, B: () => i++, process }))
 
     const worker = new Worker(__filename, {
         workerData: {
@@ -48,6 +48,7 @@ if (isMainThread) {
     parentPort.once('message', (message) => {
         mainLand.console.log(message)
         mainLand.console.log(mainLand.b)
+        mainLand.process.exit()
     });
 
     parentPort.postMessage(proxy.current)
