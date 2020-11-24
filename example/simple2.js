@@ -29,7 +29,7 @@ if (isMainThread) {
     const sab = new SharedArrayBuffer(1024 * 1024 * 8)
     const ia32 = new Int32Array(sab)
     let i = 0
-    const proxy = DomProxy.create(ia32, () => ({ a: 'AAAA' }))
+    const proxy = DomProxy.create(ia32, () => ({ a: 'AAAA', console }))
     const current = proxy.current
 
     spawnWorker('b', { host: current, ia32 }, function (bWorkerId, workerB) {
@@ -43,11 +43,13 @@ if (isMainThread) {
             const start = Date.now()
             console.log(start)
             let res = 0
-            for (let i = 0; i < 10000; i++) {
+            for (let i = 0; i < 2000; i++) {
                 res +=fn(1)
             }
             console.log(res, Date.now() - start)
-            process.exit()
+
+            workerB.postMessage(cWorkerId)
+            workerC.postMessage(bWorkerId)
         }) 
     })
 } else {
@@ -72,9 +74,9 @@ function workerB (ia32, host) {
 
     const mainLand = proxy.getRemote(host)
 
-    parentPort.once('message', (message) => {
-        mainLand.console.log(message)
-        mainLand.console.log(mainLand.b)
+    parentPort.once('message', (cWorkerId) => {
+        const workerC = proxy.getRemote(cWorkerId)
+        mainLand.console.log('call from b to c ' + workerC.c)
     });
 
     parentPort.postMessage(proxy.current)
@@ -88,9 +90,9 @@ function workerC (ia32, host) {
 
     const mainLand = proxy.getRemote(host)
 
-    parentPort.once('message', (message) => {
-        mainLand.console.log(message)
-        mainLand.console.log(mainLand.b)
+    parentPort.once('message', (bWorkerId) => {
+        const workerB = proxy.getRemote(bWorkerId)
+        mainLand.console.log('call from c to b ' + workerB.b)
     });
 
     parentPort.postMessage(proxy.current)

@@ -26,7 +26,7 @@ if (isMainThread) {
         console.log(start)
         let res = 0
 
-        for (let i = 0; i < 10000; i++) {
+        for (let i = 0; i < 2000; i++) {
             res += remote.A()
         }
 
@@ -48,7 +48,6 @@ if (isMainThread) {
     parentPort.once('message', (message) => {
         mainLand.console.log(message)
         mainLand.console.log(mainLand.b)
-        mainLand.process.exit()
     });
 
     parentPort.postMessage(proxy.current)
