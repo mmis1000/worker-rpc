@@ -3,15 +3,16 @@ const {
 } = require('worker_threads');
 
 const ObjectProxy = require('../src/object-proxy')
-const listen = require('../src/rpc')
+const listen = require('../src/rpc-deasync')
+const createRelay = require('../src/port-relay')
 
 if (isMainThread) {
     const sab = new SharedArrayBuffer(1024 * 1024 * 8)
     const ia32 = new Int32Array(sab)
+    const relay = createRelay()
     let i = 0
-
     const proxy = ObjectProxy.create(
-        listener => listen(listener, ia32), 
+        listener => listen(listener, ia32, relay.port), 
         () => ({
             b: 'BBBB',
             console,
@@ -20,12 +21,18 @@ if (isMainThread) {
         })
     )
 
-    const worker = new Worker(__filename, {
-        workerData: {
-            ia32,
-            host: proxy.current
+    const workerPort = relay.createFriend()
+    const worker = new Worker(
+        __filename,
+        {
+            workerData: {
+                ia32,
+                port: workerPort,
+                host: proxy.current
+            },
+            transferList: [workerPort]
         }
-    });
+    );
 
     worker.on('message', (workerId) => {
         console.log('main ready')
@@ -51,17 +58,24 @@ if (isMainThread) {
 
 } else {
     const ia32 = workerData.ia32;
+    const port = workerData.port;
     const host = workerData.host;
 
     const proxy = ObjectProxy.create(
-        listener => listen(listener, ia32),
+        listener => listen(listener, ia32, port),
         () => ({ a: 'AAAA', A: (a) => mainLand.B() })
     )
+
     const mainLand = proxy.getRemote(host)
 
     parentPort.once('message', (message) => {
-        mainLand.console.log(message)
-        mainLand.console.log(mainLand.b)
+        // port.postMessage({ state: 'send', from: proxy.current, to: host, data: { type: 'no-work' }})
+        // FIXME: Why is this dead locked without setImmediate?
+        setImmediate(() => {
+            // console.trace('Current stack')
+            mainLand.console.log(message)
+            mainLand.console.log(mainLand.b, 'b')
+        })
     });
 
     parentPort.postMessage(proxy.current)

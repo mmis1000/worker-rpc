@@ -5,11 +5,11 @@ const listen = require('./rpc')
 module.exports = {
     /**
     * create the dom proxy
-    * @param {Int32Array} ia32 
+    * @param {(listener: (from: number, message: Command) => DomProxyResponse) => Rpc} listen 
     * @param {()=>any} getRoot 
     */   
-    create: function create(ia32, getRoot) {
-        const rpc = listen(listener, ia32)
+    create: function create(listen, getRoot) {
+        const rpc = listen(listener)
     
         const currentThread = rpc.current
         const rpcSend = /** @type {RpcSend} */(rpc.send)

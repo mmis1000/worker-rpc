@@ -15,6 +15,7 @@ const MISS_AWAIT_TIMEOUT = 0.05
  * 
  * @param {(from: number, message: any)=>any} handler 
  * @param {Int32Array} ia32 
+ * @returns {Rpc}
  */
 module.exports = function listen(handler, ia32) {
     /**
@@ -557,5 +558,5 @@ module.exports = function listen(handler, ia32) {
         send (/** @type {number} */targetThread, /** @type {any} */message) {
             return send(ia32, current, targetThread, message)
         }
-    } 
+    }
 }

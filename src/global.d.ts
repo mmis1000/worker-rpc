@@ -172,6 +172,21 @@ interface ResponseCall {
     value: Value
 }
 
+interface MessagePortPayLoad {
+    id: number
+    from: number
+    to: number
+    state: 'send' | 'reply'
+    error: boolean
+    data: any
+    __for?: any
+}
+
+interface Rpc {
+    current: number,
+    send (targetThread: number, data: any): any
+}
+
 type DomProxyResponse = 
     ResponseGetRoot |
     ResponseRef |
@@ -214,14 +229,3 @@ type RpcSendWithThrow = {
 
 declare function setImmediate(fn: (...arg: any[])=>void): number
 declare function clearImmediate(id: number): void
-
-
-declare module global {
-    interface globalThis {
-        DomProxy: any
-    }
-
-    namespace globalThis {
-        var DomProxy: any
-    }
-}
